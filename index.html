@@ -1,0 +1,174 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TDEE+ Calculator with Full Strategy</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #dcefe2;
+      margin: 0;
+      padding: 2em;
+    }
+    .container {
+      max-width: 800px;
+      background: #fff;
+      padding: 2em;
+      margin: 0 auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #437b3b;
+    }
+    label, select, input {
+      display: block;
+      margin-bottom: 1em;
+      width: 100%;
+    }
+    button {
+      padding: 0.75em;
+      width: 100%;
+      background: #32cd32;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5em;
+    }
+    th, td {
+      padding: 0.6em;
+      border: 1px solid #ccc;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    img.logo {
+      display: block;
+      margin: 0 auto 1.5em;
+      max-width: 180px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="bellicu-logo.png" alt="BELLICU Logo" class="logo" />
+    <h2>TDEE+ Calculator</h2>
+    <form id="tdeeForm">
+      <label>Weight (kg):<input type="number" id="weight" required></label>
+      <label>Height (cm):<input type="number" id="height" required></label>
+      <label>Age:<input type="number" id="age" required></label>
+      <label>Gender:
+        <select id="gender">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </label>
+      <label>Activity Level:
+        <select id="activity">
+          <option value="sedentary">Sedentary (little/no exercise)</option>
+          <option value="light">Lightly active (1–2 days/week)</option>
+          <option value="moderate">Moderately active (3–5 days/week)</option>
+          <option value="very">Very active (6–7 days/week)</option>
+          <option value="extreme">Extremely active (2x/day)</option>
+        </select>
+      </label>
+      <label>Goal:
+        <select id="goal" onchange="toggleCuttingOptions()">
+          <option value="maintain">Maintain</option>
+          <option value="cut">Cut</option>
+          <option value="bulk">Bulk</option>
+        </select>
+      </label>
+      <div id="cuttingFields" style="display:none;">
+        <label>Refeed Days/Week:
+          <select id="refeedDays">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="showStrategy"> Show 9-week Cutting Strategy</label>
+      </div>
+      <button type="button" onclick="calculateTDEE()">Calculate</button>
+    </form>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    function toggleCuttingOptions() {
+      const goal = document.getElementById('goal').value;
+      document.getElementById('cuttingFields').style.display = (goal === 'cut') ? 'block' : 'none';
+    }
+
+    function calculateTDEE() {
+      const weight = parseFloat(document.getElementById('weight').value);
+      const height = parseFloat(document.getElementById('height').value);
+      const age = parseInt(document.getElementById('age').value);
+      const gender = document.getElementById('gender').value;
+      const activity = document.getElementById('activity').value;
+      const goal = document.getElementById('goal').value;
+      const refeedDays = parseInt(document.getElementById('refeedDays').value || 0);
+      const showStrategy = document.getElementById('showStrategy').checked;
+
+      if (isNaN(weight) || isNaN(height) || isNaN(age)) {
+        document.getElementById('result').innerHTML = "<p>Please fill in all fields.</p>";
+        return;
+      }
+
+      let bmr = (gender === "male")
+        ? 10 * weight + 6.25 * height - 5 * age + 5
+        : 10 * weight + 6.25 * height - 5 * age - 161;
+
+      const activityMap = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        very: 1.725,
+        extreme: 1.9
+      };
+
+      const tdee = Math.round(bmr * activityMap[activity]);
+      let goalCals = tdee;
+      if (goal === "cut") goalCals -= 550;
+      if (goal === "bulk") goalCals += 330;
+
+      let output = `<p><strong>Estimated TDEE:</strong> ${tdee} kcal/day</p>`;
+      output += `<p><strong>Goal Calories:</strong> ${goalCals} kcal/day</p>`;
+
+      if (goal === "cut" && showStrategy) {
+        const weeklyDeficit = 3850;
+        const cutDays = 7 - refeedDays;
+        const deficitPerDay = weeklyDeficit / cutDays;
+
+        const week1 = Math.round(tdee - deficitPerDay * 0.66);
+        const week4 = Math.round(tdee - deficitPerDay * 0.85);
+        const week7 = Math.round(tdee - deficitPerDay);
+
+        output += `
+          <h3>📉 9-Week Cutting Strategy</h3>
+          <table>
+            <tr><th>Phase</th><th>Cut Days (kcal)</th><th>Refeed Days (kcal)</th></tr>
+            <tr><td>Weeks 1–3</td><td>${week1}</td><td>${tdee}</td></tr>
+            <tr><td>Weeks 4–6</td><td>${week4}</td><td>${tdee}</td></tr>
+            <tr><td>Weeks 7–9</td><td>${week7}</td><td>${tdee}</td></tr>
+          </table>
+          <h3>🔁 Reverse Diet (Weeks 10–12)</h3>
+          <p>Add <strong>+100 kcal</strong> every 3 days from ~${week7} kcal until reaching ~${tdee} kcal/day.</p>
+        `;
+      }
+
+      document.getElementById('result').innerHTML = output;
+    }
+  </script>
+</body>
+</html>
