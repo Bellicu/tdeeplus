@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>TDEE+ Calculator – BELLICU</title>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<style>
+    body {
+      background-color: #dcefe2;
+      font-family: Arial, sans-serif;
+      padding: 2em;
+    }
+    .container {
+      max-width: 960px;
+      background: #fff;
+      padding: 2em;
+      margin: auto;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #437b3b;
+    }
+    label, select, input {
+      display: block;
+      margin-bottom: 1em;
+      width: 100%;
+    }
+    .inline { display: flex; gap: 1em; }
+    .inline > div { flex: 1; }
+    button {
+      padding: 1em;
+      width: 100%;
+      background: #32cd32;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    table {
+      width: 100%;
+      margin-top: 2em;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.75em;
+      text-align: left;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .logo {
+      display: block;
+      margin: 0 auto 1.5em;
+      max-width: 200px;
+    }
+    .macros {
+      margin-top: 2em;
+      padding: 1em;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+<img alt="BELLICU Logo" class="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYGBgAAAABAABJzQnCgAAAABJRU5ErkJggg=="/>
+<h2>TDEE+ Calculator</h2>
+<form id="tdeeForm">
+<label>Units:
+        <select id="unitSystem" onchange="toggleUnits()">
+<option value="metric">Metric (kg/cm)</option>
+<option value="imperial">Imperial (lbs/in)</option>
+</select>
+</label>
+<label>Age:<input id="age" required="" type="number"/></label>
+<label>Gender:
+        <select id="gender">
+<option value="male">Male</option>
+<option value="female">Female</option>
+</select>
+</label>
+
+<div class="inline">
+<div id="heightMetric"><label>Height: <input id="heightCm" type="number"/> cm</label></div>
+<div class="inline" id="heightImperial" style="display:none;">
+<div><label>Feet: <input id="heightFeet" min="0" type="number"/></label></div>
+<div><label>Inches: <input id="heightInches" max="11" min="0" type="number"/></label></div>
+</div>
+<div><label>Weight: <input id="weight" type="number"/> <span id="weightUnit">kg</span></label></div>
+</div>
+
+<label>Work Activity:
+        <select id="dailyActivity">
+<option value="sedentary">Sedentary (office job)</option>
+<option value="light">Light (retail, walking)</option>
+<option value="active">Active (manual labor)</option>
+</select>
+</label>
+<h3>Primary Training Activity</h3>
+<label>Type:
+        <select id="primaryType">
+<option value="fitness">Fitness</option>
+<option value="bodybuilding">Bodybuilding</option>
+<option value="running">Running</option>
+<option value="cycling">Cycling</option>
+<option value="swimming">Swimming</option>
+<option value="walking">Walking</option>
+</select>
+</label>
+<label>Duration (minutes):<input id="primaryMinutes" required="" type="number"/></label>
+<label>Intensity (1–10):<input id="primaryIntensity" max="10" min="1" required="" type="number"/></label>
+<h3>Secondary Training Activity (Optional)</h3>
+<label>Type:
+        <select id="secondaryType">
+<option value="none">None</option>
+<option value="fitness">Fitness</option>
+<option value="bodybuilding">Bodybuilding</option>
+<option value="running">Running</option>
+<option value="cycling">Cycling</option>
+<option value="swimming">Swimming</option>
+<option value="walking">Walking</option>
+</select>
+</label>
+<label>Duration (minutes):<input id="secondaryMinutes" type="number"/></label>
+<label>Intensity (1–10):<input id="secondaryIntensity" max="10" min="1" type="number"/></label>
+<h3>Your Goal</h3>
+<label>
+<select id="goal" onchange="toggleCuttingOptions()">
+<option value="maintain">Maintain</option>
+<option value="cut">Cutting</option>
+<option value="bulk">Bulking</option>
+</select>
+</label>
+<div id="cuttingOptions" style="display:none;">
+<label>Cutting Aggression:
+          <select id="cutAggression">
+<option value="light">Light (0.25 kg/week)</option>
+<option selected="" value="moderate">Moderate (0.5 kg/week)</option>
+<option value="aggressive">Aggressive (0.7 kg/week)</option>
+</select>
+</label>
+<label>Refeed Days per Week:
+          <select id="refeedDays">
+<option value="0">None</option>
+<option value="1">1</option>
+<option value="2">2</option>
+</select>
+</label>
+<label><input id="showStrategy" type="checkbox"/> Show 9-week Cutting Strategy</label>
+</div>
+<button onclick="calculateTDEE()" type="button">Calculate</button>
+</form>
+<div id="results" style="margin-top:2em;"></div>
+<script>
+function toggleUnits() {
+  const unit = document.getElementById("unitSystem").value;
+  document.getElementById("heightMetric").style.display = unit === "metric" ? "block" : "none";
+  document.getElementById("heightImperial").style.display = unit === "imperial" ? "flex" : "none";
+  document.getElementById("weightUnit").textContent = unit === "metric" ? "kg" : "lbs";
+}
+
+function toggleCuttingOptions() {
+  const goal = document.getElementById("goal").value;
+  document.getElementById("cuttingOptions").style.display = (goal === "cut") ? "block" : "none";
+}
+
+function getActivityCalories(type, minutes, intensity) {
+  const base = {
+    fitness: 5.5,
+    bodybuilding: 6,
+    running: 10,
+    cycling: 8.5,
+    swimming: 9,
+    walking: 4
+  };
+  return (base[type] || 5) * minutes * (intensity / 5);
+}
+
+function calculateTDEE() {
+  const age = parseInt(document.getElementById("age").value);
+  const gender = document.getElementById("gender").value;
+  const unit = document.getElementById("unitSystem").value;
+
+  let height, weight, weightLbs;
+  if (unit === "metric") {
+    height = parseFloat(document.getElementById("heightCm").value);
+    weight = parseFloat(document.getElementById("weight").value);
+    weightLbs = weight * 2.20462;
+  } else {
+    const feet = parseFloat(document.getElementById("heightFeet").value) || 0;
+    const inches = parseFloat(document.getElementById("heightInches").value) || 0;
+    height = (feet * 12 + inches) * 2.54;
+    weightLbs = parseFloat(document.getElementById("weight").value);
+    weight = weightLbs * 0.453592;
+  }
+
+  const workActivity = document.getElementById("dailyActivity").value;
+  const workFactor = { sedentary: 1.2, light: 1.4, active: 1.6 }[workActivity];
+
+  const bmr = gender === "male"
+    ? 10 * weight + 6.25 * height - 5 * age + 5
+    : 10 * weight + 6.25 * height - 5 * age - 161;
+
+  const primaryType = document.getElementById("primaryType").value;
+  const primaryMin = parseInt(document.getElementById("primaryMinutes").value || 0);
+  const primaryInt = parseInt(document.getElementById("primaryIntensity").value || 0);
+  const secondaryType = document.getElementById("secondaryType").value;
+  const secondaryMin = parseInt(document.getElementById("secondaryMinutes").value || 0);
+  const secondaryInt = parseInt(document.getElementById("secondaryIntensity").value || 0);
+
+  const primaryCals = getActivityCalories(primaryType, primaryMin, primaryInt);
+  const secondaryCals = secondaryType !== "none" ? getActivityCalories(secondaryType, secondaryMin, secondaryInt) : 0;
+
+  const trainingCals = primaryCals + secondaryCals;
+  const tdee = Math.round(bmr * workFactor + trainingCals);
+
+  const goal = document.getElementById("goal").value;
+  const results = [`<p><strong>Maintenance TDEE:</strong> ${tdee} kcal/day</p>`];
+
+  let targetCals = tdee;
+  if (goal === "cut") {
+    const aggression = document.getElementById("cutAggression").value;
+    const cutMap = { light: 250, moderate: 500, aggressive: 700 };
+    targetCals -= cutMap[aggression];
+    results.push(`<p><strong>Cutting Calories:</strong> ${targetCals} kcal/day</p>`);
+  } else if (goal === "bulk") {
+    targetCals += 300;
+    results.push(`<p><strong>Bulking Calories:</strong> ${targetCals} kcal/day</p>`);
+  }
+
+  const proteinOz = (weightLbs * 1) / 16;
+  const fatOz = (weightLbs * 0.4) / 16;
+  const proteinCals = proteinOz * 16 * 4;
+  const fatCals = fatOz * 16 * 9;
+  const carbCals = targetCals - proteinCals - fatCals;
+  const carbOz = carbCals / 4 / 16;
+
+  results.push(`
+    <div class="macros">
+      <h4>Suggested Macros:</h4>
+      <p><strong>Protein:</strong> ${proteinOz.toFixed(1)} oz (1 oz/lb)</p>
+      <p><strong>Fat:</strong> ${fatOz.toFixed(1)} oz (0.4 oz/lb)</p>
+      <p><strong>Carbs:</strong> ${carbOz > 0 ? carbOz.toFixed(1) : 0} oz</p>
+    </div>
+  `);
+
+  if (goal === "cut" && document.getElementById("showStrategy").checked) {
+    const refeedDays = parseInt(document.getElementById("refeedDays").value || "0");
+    const cutDays = 7 - refeedDays;
+    const weeklyDeficit = 3850;
+    const fullDeficit = weeklyDeficit / cutDays;
+    const w1 = Math.round(tdee - fullDeficit * 0.66);
+    const w4 = Math.round(tdee - fullDeficit * 0.85);
+    const w7 = Math.round(tdee - fullDeficit);
+
+    results.push(`
+    <h3>📉 9-Week Cutting Strategy</h3>
+    <table>
+      <tr><th>Phase</th><th>Cut Days (kcal)</th><th>Refeed Days (kcal)</th></tr>
+      <tr><td>Weeks 1–3</td><td>${w1}</td><td>${tdee}</td></tr>
+      <tr><td>Weeks 4–6</td><td>${w4}</td><td>${tdee}</td></tr>
+      <tr><td>Weeks 7–9</td><td>${w7}</td><td>${tdee}</td></tr>
+    </table>
+    <h4>🔁 Reverse Diet (Weeks 10–12)</h4>
+    <p>Add <strong>+100 kcal</strong> every 3 days starting from ~${w7} kcal until you reach ~${tdee} kcal/day again.</p>
+    `);
+  }
+
+  document.getElementById("results").innerHTML = results.join("");
+}
+</script>
+</div></body>
+</html>
